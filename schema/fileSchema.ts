@@ -1,16 +1,15 @@
-import { Document, model, Schema } from "mongoose";
-import { User } from "./user";
+import { Document, model, Schema, Types } from "mongoose";
+import { User } from "./userSchema";
 
 export interface File extends Document {
-  name: String;
+  name: string;
   size: Number;
-  type: String;
-  path: String;
-  owner: User["_id"];
+  type: string;
+  path: string;
+  owner: Types.ObjectId;
   access: "private" | "shared" | "public";
-  shardwith: User["_id"][] | [];
-  cloudinaryUrl: String;
-  cloudinaryId: String;
+  shardwith: Types.ObjectId[] | [];
+  cloudinaryUrl: string;
 }
 
 const fileSchema = new Schema<File>(
@@ -46,10 +45,6 @@ const fileSchema = new Schema<File>(
       ref: "User",
     },
     cloudinaryUrl: {
-      type: String,
-      required: true,
-    },
-    cloudinaryId: {
       type: String,
       required: true,
     },
