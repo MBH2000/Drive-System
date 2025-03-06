@@ -1,14 +1,13 @@
 import { Document, model, Schema, Types } from "mongoose";
-import { User } from "./userSchema";
 
 export interface File extends Document {
   name: string;
   size: Number;
   type: string;
-  path: string;
+  path: Types.ObjectId | null;
   owner: Types.ObjectId;
   access: "private" | "shared" | "public";
-  shardwith: Types.ObjectId[] | [];
+  sharedWith: Types.ObjectId[];
   cloudinaryUrl: string;
 }
 
@@ -27,8 +26,9 @@ const fileSchema = new Schema<File>(
       required: true,
     },
     path: {
-      type: String,
-      required: true,
+      type: Schema.Types.ObjectId,
+      ref: "Folder",
+      required: false,
     },
     owner: {
       type: Schema.Types.ObjectId,
@@ -40,10 +40,13 @@ const fileSchema = new Schema<File>(
       enum: ["private", "shared", "public"],
       default: "private",
     },
-    shardwith: {
-      type: [Schema.Types.ObjectId],
-      ref: "User",
-    },
+    sharedWith: [
+      {
+        type: [Schema.Types.ObjectId],
+        ref: "User",
+        default: [],
+      },
+    ],
     cloudinaryUrl: {
       type: String,
       required: true,

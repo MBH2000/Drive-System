@@ -1,12 +1,11 @@
 import { Document, model, Schema, Types } from "mongoose";
-import { User } from "./userSchema";
 
 export interface Folder extends Document {
   name: string;
   owner: Types.ObjectId;
-  parent: Types.ObjectId;
+  parent: Types.ObjectId | null;
   access: "private" | "shared" | "public";
-  shardwith: Types.ObjectId[] | [];
+  sharedWith: Types.ObjectId[];
 }
 
 const folderSchema = new Schema<Folder>(
@@ -23,17 +22,20 @@ const folderSchema = new Schema<Folder>(
     parent: {
       type: Schema.Types.ObjectId,
       ref: "Folder",
-      required: true,
+      required: false,
     },
     access: {
       type: String,
       enum: ["private", "shared", "public"],
       default: "private",
     },
-    shardwith: {
-      type: [Schema.Types.ObjectId],
-      ref: "User",
-    },
+    sharedWith: [
+      {
+        type: [Schema.Types.ObjectId],
+        ref: "User",
+        default: [],
+      },
+    ],
   },
   { timestamps: true }
 );

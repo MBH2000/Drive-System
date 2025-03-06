@@ -1,13 +1,14 @@
+
 import { Document, Model, model, Schema } from "mongoose";
 import jwt from "jsonwebtoken";
 import dotenv from "dotenv";
 import bcrypt from "bcrypt";
 dotenv.config();
-interface User extends Document {
+export interface User extends Document {
   name: string;
   email: string;
   password: string;
-  token: string;
+  token?: string;
 }
 interface UserMethods {
   generateToken(): string;
@@ -26,6 +27,12 @@ const userSchema = new Schema<User, UserMethods, UserModel>(
       type: String,
       required: true,
       unique: true,
+      validate: {
+        validator: function (value: string) {
+          return /^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$/.test(value);
+        },
+        message: "Invalid email format",
+      },
     },
     password: {
       type: String,
