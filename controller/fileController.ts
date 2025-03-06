@@ -14,7 +14,7 @@ export const uploadFile = async (req: Request, res: Response): Promise<any> => {
 
     const { originalname, mimetype, size, buffer } = req.file;
     const { folderId } = req.body;
-    const userId = authReq.user?.id; // Assuming user ID is available in req.user
+    const userId = authReq.user?._id as Types.ObjectId; // Assuming user ID is available in req.user
 
     if (!userId) {
       return res.status(401).json({ message: "Unauthorized" });
@@ -62,7 +62,7 @@ export const getFilesByFolderId = async (
   res: Response
 ): Promise<any> => {
   const authReq = req as AuthRequest;
-  const userId: Types.ObjectId = authReq.user.id; // Get authenticated user ID
+  const user = authReq.user; // Get authenticated user ID
 
   try {
     const { folderId } = req.params;
@@ -78,12 +78,13 @@ export const getFilesByFolderId = async (
       return res.status(404).json({ message: "Folder not found" });
     }
 
-    // Ensure `sharedWith` is treated as an array of strings
-    const sharedWithUsers = folder.sharedWith.map((id) => id);
 
     // 🔹 Check if the user has access to the folder
     const hasAccess =
-      folder.owner === userId || sharedWithUsers.includes(userId);
+      folder.owner.equals(user._id as string) ||
+      folder.access === "public" ||
+      (folder.access === "shared" &&
+        folder.sharedWith?.some((id) => id.equals(user._id as string)));
 
     if (!hasAccess) {
       return res.status(403).json({ message: "Access denied" });
@@ -105,7 +106,7 @@ export const getFileById = async (
   res: Response
 ): Promise<any> => {
   const authReq = req as AuthRequest;
-  const userId: Types.ObjectId = authReq.user.id; // Ensure userId is a string
+  const user = authReq.user; // Ensure userId is a string
 
   try {
     const { fileId } = req.params;
@@ -120,12 +121,12 @@ export const getFileById = async (
       return res.status(404).json({ message: "File not found" });
     }
 
-    // Ensure sharedWith is an array of strings before checking access
-    const sharedWithUsers = file.sharedWith.map((id) => id);
-
     // 🔹 Check if the user has access to the file
-    const hasAccess = file.owner === userId || sharedWithUsers.includes(userId);
-
+    const hasAccess =
+      file.owner.equals(user._id as string) ||
+      file.access === "public" ||
+      (file.access === "shared" &&
+        file.sharedWith?.some((id) => id.equals(user._id as string)));
     if (!hasAccess) {
       return res.status(403).json({ message: "Access denied" });
     }
