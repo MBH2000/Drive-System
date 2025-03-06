@@ -26,8 +26,6 @@ export const createFolder = async (
 export const getFolder = async (req: Request, res: Response): Promise<any> => {
   const authReq = req as AuthRequest;
   try {
-    
-    
     const { folderId } = authReq.params; // Use params instead of body
     console.log(folderId);
     const user = authReq.user;
@@ -42,21 +40,28 @@ export const getFolder = async (req: Request, res: Response): Promise<any> => {
     }
 
     // Find the folder
-    const folder = await Folder.findById(folderId);
+    const folder = await Folder.findOne({
+      _id: folderId,
+      $or: [
+        { owner: user._id }, // Owner has access
+        { access: "public" }, // Public access
+        { access: "shared", sharedWith: user._id } // Shared access (assuming sharedWith is the field storing shared users)
+      ],
+    });
     if (!folder) {
       return res.status(404).json({ error: "Folder not found" });
     }
 
-    // Check if the user has access
-    const hasAccess =
-      folder.owner.equals(user._id as string) ||
-      folder.access === "public" ||
-      (folder.access === "shared" &&
-        folder.sharedWith?.some((id) => id.equals(user._id as string)));
+    // // Check if the user has access
+    // const hasAccess =
+    //   folder.owner.equals(user._id as string) ||
+    //   folder.access === "public" ||
+    //   (folder.access === "shared" &&
+    //     folder.sharedWith?.some((id) => id.equals(user._id as string)));
 
-    if (!hasAccess) {
-      return res.status(403).json({ error: "Access denied" });
-    }
+    // if (!hasAccess) {
+    //   return res.status(403).json({ error: "Access denied" });
+    // }
 
     res.status(200).json(folder);
   } catch (error) {

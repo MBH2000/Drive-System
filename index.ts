@@ -9,8 +9,8 @@ import Filerouter from "./routers/fileRouter";
 
 // Load environment variables
 dotenv.config();
-
-const app: Application = express();
+ 
+const app: Application = express(); 
 app.use(express.json());
 app.use(cors({ origin: "*" }));
 
