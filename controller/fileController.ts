@@ -1,11 +1,19 @@
+//libraries imports
 import { Request, Response } from "express";
+import { Types } from "mongoose";
+//schema import
 import { File } from "../schema/fileSchema";
 import { Folder } from "../schema/folderSchema";
+import { User } from "../schema/userSchema";
+//tools import
 import cloudinaryController from "../middlewares/fileUpload";
 import { AuthRequest } from "../middlewares/auth";
-import { Types } from "mongoose";
 
-export const uploadFile = async (req: Request, res: Response): Promise<any> => {
+//creat and upload file
+export const uploadFileAPI = async (
+  req: Request,
+  res: Response
+): Promise<any> => {
   const authReq = req as AuthRequest;
   try {
     if (!req.file) {
@@ -56,52 +64,9 @@ export const uploadFile = async (req: Request, res: Response): Promise<any> => {
     res.status(500).json({ message: "Internal Server Error" });
   }
 };
-//get file by folder ID
-export const getFilesByFolderId = async (
-  req: Request,
-  res: Response
-): Promise<any> => {
-  const authReq = req as AuthRequest;
-  const user = authReq.user; // Get authenticated user ID
-
-  try {
-    const { folderId } = req.params;
-
-    if (!folderId) {
-      return res.status(400).json({ message: "Folder ID is required" });
-    }
-
-    // Check if the folder exists
-    const folder = await Folder.findById(folderId);
-
-    if (!folder) {
-      return res.status(404).json({ message: "Folder not found" });
-    }
-
-
-    // 🔹 Check if the user has access to the folder
-    const hasAccess =
-      folder.owner.equals(user._id as string) ||
-      folder.access === "public" ||
-      (folder.access === "shared" &&
-        folder.sharedWith?.some((id) => id.equals(user._id as string)));
-
-    if (!hasAccess) {
-      return res.status(403).json({ message: "Access denied" });
-    }
-
-    // Fetch all files in the folder
-    const files = await File.find({ path: folderId });
-
-    res.status(200).json({ files });
-  } catch (error) {
-    console.error("Error fetching files by folder ID:", error);
-    res.status(500).json({ message: "Internal Server Error" });
-  }
-};
 
 // Get file by file ID
-export const getFileById = async (
+export const getFileByIdAPI = async (
   req: Request,
   res: Response
 ): Promise<any> => {
@@ -135,5 +100,63 @@ export const getFileById = async (
   } catch (error) {
     console.error("Error fetching file by ID:", error);
     res.status(500).json({ message: "Internal Server Error" });
+  }
+};
+
+//share Folder API
+export const shareFileAPI = async (
+  req: Request,
+  res: Response
+): Promise<any> => {
+  const authReq = req as AuthRequest;
+  try {
+    const { fileId, userIds } = authReq.body;
+    const user = authReq.user;
+
+    if (!user) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+
+    if (!userIds || userIds.length === 0) {
+      return res
+        .status(400)
+        .json({ error: "No users provided to share the folder with" });
+    }
+
+    if (!Types.ObjectId.isValid(fileId)) {
+      return res.status(400).json({ error: "Invalid folder ID" });
+    }
+
+    const file = await File.findOne({
+      _id: fileId,
+      owner: user._id,
+    });
+    if (!file) {
+      return res.status(404).json({ error: "Folder not found" });
+    }
+    const validUserIds = userIds.filter((id: string) =>
+      Types.ObjectId.isValid(id)
+    );
+    const existingUsers = await User.find({ _id: { $in: validUserIds } });
+
+    if (existingUsers.length !== validUserIds.length) {
+      return res
+        .status(400)
+        .json({ error: "Some user IDs are invalid or do not exist" });
+    }
+
+    if (file.access === "private") {
+      file.access = "shared";
+    }
+
+    file.sharedWith = Array.from(
+      new Set([...(file.sharedWith || []), ...validUserIds])
+    );
+
+    await file.save();
+
+    res.status(200).json({ message: "File shared successfully", file });
+  } catch (error) {
+    res.status(500).json({ error });
   }
 };

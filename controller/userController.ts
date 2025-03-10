@@ -1,7 +1,12 @@
+//libraries imports
 import { Request, Response } from "express";
+//schema import
 import { User } from "../schema/userSchema";
 
-export const register = async (req: Request, res: Response): Promise<void> => {
+export const registerUserAPI = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
   try {
     const user = new User(req.body);
     const token = await user.generateToken();
@@ -11,7 +16,10 @@ export const register = async (req: Request, res: Response): Promise<void> => {
   }
 };
 
-export const login = async (req: Request, res: Response): Promise<void> => {
+export const loginUserAPI = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
   try {
     const { email, password } = req.body;
 

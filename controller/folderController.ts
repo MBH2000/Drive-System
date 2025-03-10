@@ -1,13 +1,18 @@
+//libraries imports
 import { Response, Request } from "express";
-import { AuthRequest } from "../middlewares/auth";
-import { Folder } from "../schema/folderSchema";
 import { Types } from "mongoose";
+//schema import
 import { User } from "../schema/userSchema";
+import { File } from "../schema/fileSchema";
+import { Folder } from "../schema/folderSchema";
+//tools import
+import { AuthRequest } from "../middlewares/auth";
 
-export const createFolder = async (
+//create Folder API
+export const createFolderAPI = async (
   req: Request,
   res: Response
-): Promise<void> => {
+): Promise<any> => {
   const authReq = req as AuthRequest;
   try {
     const folder = new Folder({
@@ -23,7 +28,11 @@ export const createFolder = async (
   }
 };
 
-export const getFolder = async (req: Request, res: Response): Promise<any> => {
+//get Folder Content API
+export const getFolderAPI = async (
+  req: Request,
+  res: Response
+): Promise<any> => {
   const authReq = req as AuthRequest;
   try {
     const { folderId } = authReq.params; // Use params instead of body
@@ -45,31 +54,22 @@ export const getFolder = async (req: Request, res: Response): Promise<any> => {
       $or: [
         { owner: user._id }, // Owner has access
         { access: "public" }, // Public access
-        { access: "shared", sharedWith: user._id } // Shared access (assuming sharedWith is the field storing shared users)
+        { access: "shared", sharedWith: user._id }, // Shared access (assuming sharedWith is the field storing shared users)
       ],
     });
     if (!folder) {
       return res.status(404).json({ error: "Folder not found" });
     }
-
-    // // Check if the user has access
-    // const hasAccess =
-    //   folder.owner.equals(user._id as string) ||
-    //   folder.access === "public" ||
-    //   (folder.access === "shared" &&
-    //     folder.sharedWith?.some((id) => id.equals(user._id as string)));
-
-    // if (!hasAccess) {
-    //   return res.status(403).json({ error: "Access denied" });
-    // }
-
-    res.status(200).json(folder);
+    const folders = await Folder.find({ path: folderId });
+    const files = await File.find({ path: folderId });
+    res.status(200).json({ files, folders });
   } catch (error) {
     res.status(400).json({ error });
   }
 };
 
-export const shareFolder = async (
+//share Folder API
+export const shareFolderAPI = async (
   req: Request,
   res: Response
 ): Promise<any> => {
@@ -92,17 +92,13 @@ export const shareFolder = async (
       return res.status(400).json({ error: "Invalid folder ID" });
     }
 
-    const folder = await Folder.findById(folderId);
+    const folder = await Folder.findOne({
+      _id: folderId,
+      owner: user._id,
+    });
     if (!folder) {
       return res.status(404).json({ error: "Folder not found" });
     }
-
-    if (!folder.owner.equals(user._id as string)) {
-      return res
-        .status(403)
-        .json({ error: "Access denied: Only the owner can share this folder" });
-    }
-
     const validUserIds = userIds.filter((id: string) =>
       Types.ObjectId.isValid(id)
     );

@@ -1,5 +1,4 @@
-
-import { Document, Model, model, Schema } from "mongoose";
+import { Document, Model, model, Schema, Types } from "mongoose";
 import jwt from "jsonwebtoken";
 import dotenv from "dotenv";
 import bcrypt from "bcrypt";
@@ -9,6 +8,8 @@ export interface User extends Document {
   email: string;
   password: string;
   token?: string;
+  team: string;
+  comp: Types.ObjectId;
 }
 interface UserMethods {
   generateToken(): string;
@@ -38,6 +39,15 @@ const userSchema = new Schema<User, UserMethods, UserModel>(
       type: String,
       required: true,
       unique: true,
+    },
+    team: {
+      type: String,
+      required: true,
+    },
+    comp: {
+      type: Schema.Types.ObjectId,
+      ref: "company",
+      required: true,
     },
     token: String,
   },
